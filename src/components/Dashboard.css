@@ -12,7 +12,7 @@ body{
     color: #0ff;
   }
   .dashboard .card1 {
-    background-color: #1f1f1f;
+    background-color: rgba(0, 255, 255, 0.5);
     margin-top: 100px;
     padding: 20px;
     border-radius: 10px;
@@ -20,7 +20,7 @@ body{
     transition: transform 0.3s ease, box-shadow 0.3s ease;
   }
   .dashboard .card2 {
-    background-color: #1f1f1f;
+    background-color: rgba(0, 255, 255, 0.5);
     padding: 20px;
     margin-top: 30px;
     border-radius: 10px;
@@ -28,7 +28,7 @@ body{
     transition: transform 0.3s ease, box-shadow 0.3s ease;
   }
   .dashboard .card3 {
-    background-color: #1f1f1f;
+    background-color: rgba(0, 255, 255, 0.5);
     margin-top: 30px;
     padding: 20px;
     border-radius: 10px;
@@ -55,7 +55,7 @@ body{
   }
   
   .dashboard .card2 h3 {
-    color: #0ff; /* Neon cyan */
+    color: rgb(76, 84, 84); /* Neon cyan */
     text-shadow: 0 0 10px #0ff;
   }
   
