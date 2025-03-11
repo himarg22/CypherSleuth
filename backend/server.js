@@ -1,45 +1,94 @@
-const express = require('express');
-const cors = require('cors');
-require('dotenv').config(); // Load environment variables
-const fetch = require('node-fetch');
+const express = require("express");
+const cors = require("cors");
+const mongoose = require("mongoose");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const dotenv = require("dotenv");
+const User = require("./models/User");
+
+dotenv.config(); // Load environment variables
 
 const app = express();
-const PORT = process.env.PORT || 5000;
-require('dotenv').config();
-// Middleware
-app.use(cors()); // Enable CORS for frontend requests
-app.use(express.json()); // Parse JSON request body
+app.use(express.json());
+app.use(cors({ origin: "http://localhost:3000", credentials: true }));
 
-// Route for URL Classification
-app.post('/api/classify-url', async (req, res) => {
-  const { url } = req.body;
-  const apiKey = process.env.IPQUALITYSCORE_API_KEY; // Load API key from .env
-  const apiUrl = `https://ipqualityscore.com/api/json/url/${apiKey}/${encodeURIComponent(url)}`;
+const PORT = process.env.PORT || 5002;
 
+// ✅ Connect to MongoDB
+mongoose
+  .connect(process.env.MONGO_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
+  .then(() => console.log("✅ MongoDB connected"))
+  .catch((err) => console.error("❌ MongoDB connection error:", err));
+
+// ✅ **Register Route**
+app.post("/register", async (req, res) => {
   try {
-    const response = await fetch(apiUrl, { method: 'GET' });
-    const data = await response.json();
+    const { username, email, password } = req.body; // ✅ Include username
+    console.log("Received Data:", username, email, password);
 
-    if (!data.success) {
-      throw new Error('API request failed: ' + data.message);
+    if (!username || !email || !password) {
+      return res.status(400).json({ error: "All fields are required" });
     }
 
-    // Determine classification based on API response
-    let classification = 'Safe';
-    if (data.unsafe) {
-      classification = 'Malicious';
-    } else if (data.phishing) {
-      classification = 'Phishing';
-    } else if (data.spamming) {
-      classification = 'Spam';
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ error: "User already exists!" });
     }
 
-    res.json({ classification });
-  } catch (error) {
-    console.error('Error classifying URL:', error);
-    res.status(500).json({ error: 'Failed to classify URL' });
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const newUser = new User({ username, email, password: hashedPassword });
+
+    await newUser.save();
+    console.log("User registered successfully");
+
+    res.status(201).json({ message: "User registered successfully" });
+  } catch (err) {
+    console.error("Registration Error:", err);
+    res.status(500).json({ error: "Internal Server Error", details: err.message });
   }
 });
 
-// Start the Server
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// ✅ **Login Route**
+app.post("/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // Validate input
+    if (!email || !password) {
+      return res.status(400).json({ error: "All fields are required" });
+    }
+
+    // Find user by email
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(400).json({ error: "User not found" });
+    }
+
+    // Compare password with hashed password in DB
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ error: "Invalid credentials" });
+    }
+
+    // Generate JWT Token
+    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
+      expiresIn: "1h",
+    });
+
+    res.json({ message: "Login successful", token });
+  } catch (err) {
+    console.error("❌ Login Error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ✅ **Test Route**
+app.get("/", (req, res) => {
+  res.send("Server is running...");
+});
+
+// ✅ **Start the Server**
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
