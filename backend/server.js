@@ -5,13 +5,13 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const dotenv = require("dotenv");
 const User = require("./models/User");
+const axios = require("axios");
 
 dotenv.config(); // Load environment variables
 
 const app = express();
 app.use(express.json());
 app.use(cors({ origin: "http://localhost:3000", credentials: true }));
-
 const PORT = process.env.PORT || 5002;
 
 // ✅ Connect to MongoDB
@@ -82,6 +82,34 @@ app.post("/login", async (req, res) => {
   } catch (err) {
     console.error("❌ Login Error:", err);
     res.status(500).json({ error: "Internal server error" });
+  }
+});
+const breachSchema = new mongoose.Schema({
+  name: String,
+  email: String,
+  breachType: String,
+  description: String,
+  reportedAt: { type: Date, default: Date.now },
+});
+
+// Create model
+const BreachReport = mongoose.model("BreachReport", breachSchema);
+
+// Route to store breach report
+app.post("/report-breach", async (req, res) => {
+  try {
+    const { name, email, breachType, description } = req.body;
+
+    if (!name || !email || !breachType || !description) {
+      return res.status(400).json({ error: "All fields are required" });
+    }
+
+    const newReport = new BreachReport({ name, email, breachType, description });
+    await newReport.save();
+
+    res.json({ message: "Report submitted successfully!" });
+  } catch (error) {
+    res.status(500).json({ error: "Error saving report" });
   }
 });
 
